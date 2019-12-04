@@ -513,4 +513,4 @@ Trouver l'unité associée au processus `chronyd`
 ## II. Boot et Logs
 
 Graphe de la séquence de boot
-
+![graphe boot](https://github.com/jonimofo/m1-tp-systemd/blob/master/pictures/systemd_boot_graphe.png)
