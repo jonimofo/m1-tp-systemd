@@ -512,5 +512,59 @@ Trouver l'unité associée au processus `chronyd`
 
 ## II. Boot et Logs
 
-Graphe de la séquence de boot
+*Graphe de la séquence de boot*
 ![graphe boot](https://github.com/jonimofo/m1-tp-systemd/blob/master/pictures/systemd_boot_graphe.png)
+
+*Temps nécessaire à sshd.service pour démarrer*
+```
+root@fedora31-2 jonimofo]# systemd-analyze blame | grep sshd
+
+   13ms sshd.service
+```
+
+## III. Mécanismes manipulés par systemd
+
+### 1. cgroups
+
+Différence entre `scope` et `slice` :
+* **scope** : cgroup contenant des processus non gérés par systemd
+* **slice** : cgroup contenant de processus directement gérés par systemd
+
+Identifier le cgroup utilisé par votre session SSH.  
+*Avec le style.*
+```
+[root@fedora31-2 jonimofo]# systemctl status sshd.service | grep -A2 CGroup | awk 'FNR ==2 {print $1}'
+
+└─17762
+```
+
+Identifier la RAM maximale à votre disposition
+```
+[root@fedora31-2 cgroup]# cat memory/memory.max_usage_in_bytes
+
+602877952
+```
+
+### TODO Modifier la RAM dédiée à votre session utilisateur
+### COMMENT vérifier la mémoire sans cat les fichiers ? Possible ?
+A la base on a 256M de RAM alloué
+```
+[root@fedora31-2 cgroup]# cat /etc/systemd/system.control/user.slice.d/50-MemoryMax.conf | grep -v '#'
+
+[Slice]
+MemoryMax=268435456
+```
+
+On passe à 512M de RAM et on vérifie la bonne application du changement.
+```
+[root@fedora31-2 cgroup]# systemctl set-property user.slice MemoryMax=512M
+
+[root@fedora31-2 cgroup]# cat /etc/systemd/system.control/user.slice.d/50-MemoryMax.conf | grep -v '#'
+
+[Slice]
+MemoryMax=536870912
+```
+
+### 2. D-Bus
+
+ Observer, identifier, et expliquer complètement un évènement choisi
