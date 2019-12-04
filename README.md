@@ -509,3 +509,8 @@ Trouver l'unité associée au processus `chronyd`
 *Merci à toi Léo de nous le faire désactiver juste avant et par là-même de me faire chercher (à une heure bien trop tardive) le pid d'uns service qui ne tournait plus. J'ai même réussi à me demander si un service qui était inactive pouvait quand même avoir un PID.*
 
 #### TODO/LATER vérifier si un process prendra forcément le même PID à chaque fois. Si oui, pourquoi ? Si non, pourquoi ?
+
+## II. Boot et Logs
+
+Graphe de la séquence de boot
+
