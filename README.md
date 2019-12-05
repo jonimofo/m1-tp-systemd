@@ -567,4 +567,244 @@ MemoryMax=536870912
 
 ### 2. D-Bus
 
- Observer, identifier, et expliquer complètement un évènement choisi
+[Excellent lien FR sur dbus](https://www.linuxembedded.fr/2015/07/comprendre-dbus/)
+[Lien ENG de Léo sur dbus](http://0pointer.net/blog/the-new-sd-bus-api-of-systemd.html)
+
+Observer, identifier, et expliquer complètement un évènement choisi
+
+*En utilisant dbus-monitor --session : le signal a été déclenché en appuyant sur la touche Windows/Meta. Sur Gnome le comportement est l'affichage de toutes les fenêtres du Bureau, ou aussi appelé Overview en anglais.*
+```
+[mofo@lenovo ~] $ dbus-monitor --session
+
+ signal time=1575535384.822116 sender=:1.18 -> destination=(null destination) serial=1276 path=/org/gnome/Shell; interface=org.freedesktop.DBus.Properties; member=PropertiesChanged
+   string "org.gnome.Shell"
+   array [
+      dict entry(
+         string "OverviewActive"
+         variant             boolean true
+      )
+   ]
+   array [
+   ]
+signal time=1575535386.388932 sender=:1.18 -> destination=(null destination) serial=1277 path=/org/gnome/Shell; interface=org.freedesktop.DBus.Properties; member=PropertiesChanged
+   string "org.gnome.Shell"
+   array [
+      dict entry(
+         string "OverviewActive"
+         variant             boolean false
+      )
+   ]
+   array [
+   ]
+method call time=1575535386.389283 sender=:1.224 -> destination=org.gtk.Notifications serial=104 path=/org/gtk/Notifications; interface=org.gtk.Notifications; member=RemoveNotification
+   string "org.gnome.Terminal"
+   string "c96c968a-3a75-4cc8-a3f4-84caf5e14c14"
+signal time=1575535386.390445 sender=:1.224 -> destination=(null destination) serial=105 path=/org/gnome/Terminal/window/1; interface=org.gtk.Actions; member=Changed
+   array [
+   ]
+   array [
+      dict entry(
+         string "paste-text"
+         boolean true
+      )
+   ]
+   array [
+   ]
+   array [
+   ]
+ ```
+
+*"Ok Jamy, mais ça veut dire quoi tout ça ?!"*
+#### TODO gif C pas sorcier
+#### TODO finir les nouvelles UPDATES Léo
+#### TODO script Python pour ouvrir lecteur CD !
+
+Un `bus` est une structure permettant le passage de message entre ses membres. 
+
+busctl AU LIEU de dbus monitor
+busctl tree
+
+
+#### TODO dumper avec dbus-monitor et le piper dans wireshark
+
+### 3. Restriction et isolation
+
+`systemd-run` Run the specified command in a transient scope or service.
+`--wait` Wait until service stopped again
+
+*Lancement du processus sandboxé / isolé*
+```
+[root@fedora31-2 jonimofo]# systemd-run --wait -t /bin/bash
+Running as unit: run-u735.service
+Press ^] three times within 1s to disconnect TTY.
+
+```
+
+*Un service est créé, avec le CGroup 20006*
+```
+[root@fedora31-2 jonimofo]# systemctl status run-u735.service
+
+● run-u735.service - /bin/bash
+   Loaded: loaded (/run/systemd/transient/run-u735.service; transient)
+Transient: yes
+   Active: active (running) since Thu 2019-12-05 10:58:16 CET; 55min ago
+ Main PID: 20006 (bash)
+    Tasks: 1 (limit: 4685)
+   Memory: 1.2M
+   CGroup: /system.slice/run-u735.service
+           └─20006 /bin/bash
+
+Dec 05 10:58:16 fedora31-2 systemd[1]: Started /bin/bash.
+```
+
+On voit bien le process apparaître dans le cgroup. (Je suis allé chercher le PID du process bash lancé à l'aide d'un systemd-cgls)
+```
+[root@fedora31-2 cgroup]# cat systemd/user.slice/user-1001.slice/session-50.scope/tasks | grep 20005
+
+20005
+```
+
+*Ajouter directement des restriction cgroups en lançant un processus isolé*
+```
+[root@lenovo user.slice]# systemd-run -p MemoryMax=256M sleep
+
+Running as unit: run-r61230fc54834487e9043ea9a44b0dc9b.service
+```
+
+*Lancer un processus isolé en ajoutant un traçage réseau*
+```
+[root@fedora31-2 ~]# systemd-run -p IPAccounting=true --wait -t /bin/bash
+Running as unit: run-u755.service
+
+Press ^] three times within 1s to disconnect TTY.
+
+[root@fedora31-2 /]# ping -c 1 google.com
+PING google.com (216.58.206.238) 56(84) bytes of data.
+64 bytes from par10s34-in-f14.1e100.net (216.58.206.238): icmp_seq=1 ttl=57 time=1.13 ms
+
+[root@fedora31-2 /]# exit
+Finished with result: success
+Main processes terminated with: code=exited/status=0
+Service runtime: 7.878s
+IP traffic received: 385B
+IP traffic sent: 302B
+```
+On peut donc observer un récapitulatif de ce qu'il s'est passé dans le processus isolé :
+* code de retour du process (ici OK puisque 0)
+* runtime
+* traffic envoyé/reçu
+
+#### TODO chercher s'il y a une raison particulière à ce récapitulatif. Est-ce que c'est parce qu'on utilise systemd-run à des fins de tests et donc on aime bien avoir des retours ?
+
+*Ajouter des restrictions réseaux et montrer qu'elles sont restrictives.*
+```
+[root@fedora31-2 ~]# ip a | grep "inet " | grep -v 127
+
+    inet 192.168.5.252/24 brd 192.168.5.255 scope global dynamic ens3
+
+
+[root@fedora31-2 jonimofo]# systemd-run -p IPAccounting=true -p IPAddressAllow=192.168.5.0/24 -p IPAddressDeny=any --wait -t /bin/bash
+
+Running as unit: run-u767.service
+Press ^] three times within 1s to disconnect TTY.
+
+[root@fedora31-2 /]# ping -c 1 google.com
+ping: google.com: Name or service not known
+
+[root@fedora31-2 /]# ping -c 1 8.8.8.8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+ping: sendmsg: Operation not permitted
+^C
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+exit
+Finished with result: exit-code
+Main processes terminated with: code=exited/status=130
+Service runtime: 1min 16.413s
+IP traffic received: 0B
+IP traffic sent: 0B
+```
+*On voit bien que les pings ne sont pas passés. Même la résolution DNS a été bloquée.*
+
+
+#### TODO pull request typo : isoler certaines partie du système pour un ou plusieurs processus donné(s).
+
+
+*Configuration IP de base*
+```
+[jonimofo@fedora31-2 ~]$ ip a | grep "inet " | grep -v 127
+
+    inet 192.168.5.252/24 brd 192.168.5.255 scope global dynamic ens3
+```
+*Lancer un processus complètement sandboxé*
+
+`systemd-nspawn --ephemeral --private-network -D / bash`
+* **--ephemeral** run le container avec un snapshot du répertoire racine, et le détruit quand on le quitte
+* **-D** répertoire racine pour le container
+* **--private-network** désactive le réseau dans le container (il est donc bien isolé !)
+
+
+
+
+
+
+
+
+
+### 4. systemd units in-depth
+
+*Liste de tous les types d'unités systemd*
+```
+[root@fedora31-2 cgroup]# systemctl -t help
+
+Available unit types:
+service
+mount
+swap
+socket
+target
+device
+automount
+timer
+path
+slice
+scope
+```
+
+#### TODO -> pull requests -> corriger
+```
+dans les cas les plus simples, systemd gère l'extionction des processus lui-même grâece au monitoring cgroup (il détermine le numéro du père des processus)
+```
+[Coreos : explication clauses systemd](https://coreos.com/os/docs/latest/getting-started-with-systemd.html) 
+
+*Observer l'unité auditd.service*
+*Path où est défini le fichier auditd.service*
+```
+[root@fedora31-2 ~]# systemctl cat auditd.service | head -1
+
+# /usr/lib/systemd/system/auditd.service
+```
+
+*Principe de la clause ExecStartPost*
+```
+[root@fedora31-2 ~]# systemctl cat auditd.service | grep -v '#' | grep ExecStartPost
+
+ExecStartPost=-/sbin/augenrules --load
+```
+*Les commandes qui suivent cette clause sera exécutées après que TOUTES les clauses ExecStart soient achevées.*
+*augenrules est un script qui fusionne l'ensemble *
+
+augenrules is a script that merges all component audit rules files,
+       found in the audit rules directory, /etc/audit/rules.d, placing the
+       merged file in /etc/audit/audit.rules. Component audit rule files,
+       must end in .rules in order to be processed. All other files in
+       /etc/audit/rules.d are ignored.
+
+
+
+
+*Expliquer les 4 "Security Settings" dans auditd.service*
+```
+
+```
