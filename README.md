@@ -733,7 +733,6 @@ IP traffic sent: 0B
 *On voit bien que les pings ne sont pas passés. Même la résolution DNS a été bloquée.*
 
 
-#### TODO pull request typo : isoler certaines partie du système pour un ou plusieurs processus donné(s).
 
 
 *Configuration IP de base*
@@ -778,11 +777,6 @@ slice
 scope
 ```
 
-#### TODO -> pull requests -> corriger
-```
-dans les cas les plus simples, systemd gère l'extionction des processus lui-même grâece au monitoring cgroup (il détermine le numéro du père des processus)
-```
-
 [systemd - freedesktop.org](https://www.freedesktop.org/software/systemd/man/systemd.exec.html)
 [Coreos : explication clauses systemd](https://coreos.com/os/docs/latest/getting-started-with-systemd.html)
 [Digital Ocean : understanding systemd unit files](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files)
@@ -815,7 +809,7 @@ Les avantages :
 
 * **LockPersonality** booléen. Si vrai, verouille le personality system call de façon à ce que le domaine d'exécution du kernel puisse ne pas être changé à partir de la Personality par défaut/choisie. Utile pour améliorer la sécurité parce que certaines personality peuvent être mal testées et source de vunlnérabilités.
 
-Qu'est-ce qu'une `Personality` ? Sert à définir différents domaines d'exécution (ou personnalités) pou chaque process. Entre autres, le domaine d'exécution dit à Linux comment mapper les signaux numériques en signaux d'actions. Le domaine d'exécution permet à Linux de fournit un support limité pour les binaires compilés sous d'autres OS UNIX.
+Qu'est-ce qu'une `Personality` ? Sert à définir différents domaines d'exécution (ou personnalités) pour chaque process. Entre autres, le domaine d'exécution dit à Linux comment mapper les signaux numériques en signaux d'actions. Le domaine d'exécution permet à Linux de fournir un support limité pour les binaires compilés sous d'autres OS UNIX.
 
 * **ProtectControlGroups** booléen. Si vrai, la hierarchie du Linux Control Groups (cgroups) accessible via /sys/fs/cgroup sera définie en read-only pour tous les processus de l'unité. A l'exception des managers de container, aucun service ne devrait avoir besoin du privilège d'écriture sur les hierarchies de contrôle cgroup. Cette option est seulement disponible pour les services système.
 
@@ -825,8 +819,6 @@ Cette option est seulement disponible pour les services système.
 
 
 #### 2. Création de service simple
-
-### TODO FIX TYPE Beuacoup beaucoup d'autres options sont disponibles pour un service, comme la définition de variables d'environnemen
 
 *Créer un fichier dans /etc/systemd/system qui comporte le suffixe .service*
 * doit posséder une description
@@ -898,7 +890,47 @@ Dec 06 11:53:10 fedora31-2 systemd[1]: Started Simple web server.
 </head>
 ```
 
-La commande `enable` permet de configurer les services qui seront lancés au démarrage.
+La commande `enable` permet de configurer les services qui seront lancés au démarrage. Elle est obligatoire pour enble un service.
+Mais alors, à quoi sert la clause `WantedBy=multi-user.target` ?
+**WantedBy** permet de spécifier dans quel Target doit être actif le service. Systemd introduit la notion de target au sein de ses unités. Une target permet de regrouper dans un seul paquet plusieurs autres unités et de retrouver la notion de runlevel. En spécifiant multi-user.target, le service est actif dans les Runlevels 2, 3, 4 et 5.  
+
+Qu'est-ce qu'un runlevel ? C'est finalement un niveau de capacité appliqué à une Target.  
+[Landoflinux runlevels](http://www.landoflinux.com/linux_runlevels_systemd.html)  
+
+|Run Lvl| Target Units                       | Description             |
+|-------| -----------------------------------| ----------------------- |
+|0      | runlevel0.target, poweroff.target  | Shut down and power off |
+|1      | runlevel1.target, rescue.target    | Set up a rescue shell   |
+|2,3,4  | runlevel[234].target,              | Set up a non-gfx multi-user shell multi-user.target |
+|5      | runlevel5.target, graphical.target | Set up a gfx multi-user shell |
+|6      | runlevel6.target, reboot.target    | Shut down and reboot the system |
+
+
+*Display le runlevel courant*
+```
+[root@fedora31-2 jonimofo]# systemctl get-default
+
+multi-user.target
+```
+Intéressant. Et sur ma machine à moi ? (poste client)
+```
+[mofo@lenovo m1-tp-systemd] $ systemctl get-default
+graphical.target
+```
+Pourquoi donc ? Parce que j'ai en plus un accès graphique.
+
+*Lister les runlevel*
+```
+[root@fedora31-2 jonimofo]# ls -al /lib/systemd/system/runlevel*
+
+lrwxrwxrwx. 1 root root   15 Nov 19 15:40 /lib/systemd/system/runlevel0.target -> poweroff.target
+lrwxrwxrwx. 1 root root   13 Nov 19 15:40 /lib/systemd/system/runlevel1.target -> rescue.target
+lrwxrwxrwx. 1 root root   17 Nov 19 15:40 /lib/systemd/system/runlevel2.target -> multi-user.target
+lrwxrwxrwx. 1 root root   17 Nov 19 15:40 /lib/systemd/system/runlevel3.target -> multi-user.target
+lrwxrwxrwx. 1 root root   17 Nov 19 15:40 /lib/systemd/system/runlevel4.target -> multi-user.target
+lrwxrwxrwx. 1 root root   16 Nov 19 15:40 /lib/systemd/system/runlevel5.target -> graphical.target
+lrwxrwxrwx. 1 root root   13 Nov 19 15:40 /lib/systemd/system/runlevel6.target -> reboot.target
+```
 
 
 #### 3. Sandboxing (heavy security)
@@ -910,3 +942,68 @@ La commande `enable` permet de configurer les services qui seront lancés au dé
 → Overall exposure level for webserver.service: 9.6 UNSAFE 😨
 ```
 Pas fameux. Tâchons d'améliorer ça.
+
+
+*Expliquer au moins 5 cinq clauses de sécurité ajoutées*
+* **PrivateTmp** Isole le `/tmp` du service de celui du host (à l'aide de namespaces system)
+* **PrivateUser** Le service n'a pas accès aux autres utilisateurs.
+* **ProtectSystem**
+* **ProtectSystem**
+* **ProtectSystem**
+
+--> expliquer pourquoi chaque choix
+
+*Mettez en place au moins une mesure liée aux cgroups*
+vous pouvez vérifier que c'est le cas en regardant dans /sys/fs/cgroup
+
+*Mettez en place au moins une mesure liée aux namespaces*
+vous pouvez vérifier que c'est le cas en regardant dans /proc/<PID>/ns
+
+
+vérifier avec pscap ??
+show running processes with cgroups hierarchy made by systemd:
+
+  ps xawf -eo pid,user,cgroup,args
+
+
+
+
+
+```
+[Unit]
+Description=Simple web server
+After=firewalld.service
+Requires=firewalld.service
+
+[Service]
+# Limité en RAM
+MemoryMax=128M
+# Ouvre port firewall quand le service est lancé
+ExecStartPre= firewall-cmd --add-port=8000/tcp
+ExecStartPre= firewall-cmd --reload
+# Lancer un web serveur
+ExecStart=python -m http.server
+# Ferme port firewall quand stoppé
+ExecStop=firewall-cmd --remove-port=8000/tcp
+
+### Security Settings ###
+MemoryDenyWriteExecute=true
+LockPersonality=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectHome=true
+ProtectHostname=true
+# ProtectSystem=true
+PrivateUsers=true
+PrivateNetwork=yes
+PrivateTmp=yes
+InaccessibleDirectories=/home
+ReadOnlyDirectories=/var
+CapabilityBoundingSet=CAP_CHOWN CAP_KILL
+RestrictNamespaces=CLONE_NEWCGROUP CLONE_NEWIPC CLONE_NEWNET
+
+
+# Section nécessaire pour faire fonctionner le enable
+[Install]
+WantedBy=multi-user.target
+```

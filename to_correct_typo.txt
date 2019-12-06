@@ -1,0 +1,11 @@
+### TODO FIX TYPE Beuacoup beaucoup d'autres options sont disponibles pour un service, comme la définition de variables d'environnemen
+
+#### FIX TYPO les appels système sont des fonctions du kernel, qui permettent d'effectuer de lui demander d'effectuer des actions
+
+#### TODO pull request typo : isoler certaines partie du système pour un ou plusieurs processus donné(s).
+
+#### TODO -> pull requests -> corriger
+```
+dans les cas les plus simples, systemd gère l'extionction des processus lui-même grâece au monitoring cgroup (il détermine le numéro du père des processus)
+```
+on peut aussi utiliser systemd-analyse blame en ligne de commande
