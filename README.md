@@ -538,6 +538,11 @@ Identifier le cgroup utilisé par votre session SSH.
 └─17762
 ```
 
+
+!!!! attention peut être just el enuméro du pid, pas du Cgroup !! 
+
+
+
 Identifier la RAM maximale à votre disposition
 ```
 [root@fedora31-2 cgroup]# cat memory/memory.max_usage_in_bytes
@@ -754,6 +759,7 @@ IP traffic sent: 0B
 
 ### 4. systemd units in-depth
 
+#### 1. Exploration de services existants
 *Liste de tous les types d'unités systemd*
 ```
 [root@fedora31-2 cgroup]# systemctl -t help
@@ -776,7 +782,10 @@ scope
 ```
 dans les cas les plus simples, systemd gère l'extionction des processus lui-même grâece au monitoring cgroup (il détermine le numéro du père des processus)
 ```
-[Coreos : explication clauses systemd](https://coreos.com/os/docs/latest/getting-started-with-systemd.html) 
+
+[systemd - freedesktop.org](https://www.freedesktop.org/software/systemd/man/systemd.exec.html)
+[Coreos : explication clauses systemd](https://coreos.com/os/docs/latest/getting-started-with-systemd.html)
+[Digital Ocean : understanding systemd unit files](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files)
 
 *Observer l'unité auditd.service*
 *Path où est défini le fichier auditd.service*
@@ -793,18 +802,111 @@ dans les cas les plus simples, systemd gère l'extionction des processus lui-mê
 ExecStartPost=-/sbin/augenrules --load
 ```
 *Les commandes qui suivent cette clause sera exécutées après que TOUTES les clauses ExecStart soient achevées.*
-*augenrules est un script qui fusionne l'ensemble *
-
-augenrules is a script that merges all component audit rules files,
-       found in the audit rules directory, /etc/audit/rules.d, placing the
-       merged file in /etc/audit/audit.rules. Component audit rule files,
-       must end in .rules in order to be processed. All other files in
-       /etc/audit/rules.d are ignored.
-
-
-
+*augenrules est un script qui fusionne l'ensemble des fichiers .rules qui composent les règles d'audit de sécurité, situées dans /etc/audit/rules.d*
 
 *Expliquer les 4 "Security Settings" dans auditd.service*
+* **MemoryDenyWriteExecute** booléen. Si vrai, essaie de créer des mémory mapping disponibles à l'écriture et l'exécution en même temps, ou change des memory mappings existants pour les rendre exécutables, ou encore les segments partagés de mapping memory exécutables sont interdits. Cette option améliore la sécurité, puisqu'elle rend plus difficile pour les software exploit de changer le running code dynamiquement.
+
+Qu'est-ce qu'un `memory map` ? C'est une structure de données qui réside directement dans la mémoire, indiquant comment est organisée la mémoire.
+Les avantages :
+* Pas besoin de partition de données. Tous les devices peuvent voir la structure complète de mémoire
+* Pas besoin d'allouer de l'espace dans la mémoire ou de copier des données manuellement. Tous les transferts de données sont implicitement effectués par le kernel quand nécessaire
+* Tous les transferts de données émanent du kernel et sont asynchrones
+
+* **LockPersonality** booléen. Si vrai, verouille le personality system call de façon à ce que le domaine d'exécution du kernel puisse ne pas être changé à partir de la Personality par défaut/choisie. Utile pour améliorer la sécurité parce que certaines personality peuvent être mal testées et source de vunlnérabilités.
+
+Qu'est-ce qu'une `Personality` ? Sert à définir différents domaines d'exécution (ou personnalités) pou chaque process. Entre autres, le domaine d'exécution dit à Linux comment mapper les signaux numériques en signaux d'actions. Le domaine d'exécution permet à Linux de fournit un support limité pour les binaires compilés sous d'autres OS UNIX.
+
+* **ProtectControlGroups** booléen. Si vrai, la hierarchie du Linux Control Groups (cgroups) accessible via /sys/fs/cgroup sera définie en read-only pour tous les processus de l'unité. A l'exception des managers de container, aucun service ne devrait avoir besoin du privilège d'écriture sur les hierarchies de contrôle cgroup. Cette option est seulement disponible pour les services système.
+
+* **ProtectKernelModules** booléen. Si vrai, le chargement de module kernel sera refusé. Cela permet de désactiver les opérations de chargement / "déchargement"  dans un kernel modulaire. Il est recommandé de l'activer pour la plupart des services qui n'ont pas besoin de file systems spéciaux ou de modules kernel supplémentaires pour fonctioner.  
+Cette option est seulement disponible pour les services système.
+
+
+
+#### 2. Création de service simple
+
+### TODO FIX TYPE Beuacoup beaucoup d'autres options sont disponibles pour un service, comme la définition de variables d'environnemen
+
+*Créer un fichier dans /etc/systemd/system qui comporte le suffixe .service*
+* doit posséder une description
+* doit lancer un serveur web
+* doit ouvrir un port firewall quand il est lancé, et le fermer une fois que le service est stoppé
+* doit être limité en RAM
+
+*Structure du service*
+```
+Description=Simple web server
+After=firewalld.service
+Requires=firewalld.service
+
+[Service]
+# Limité en RAM
+MemoryMax=128M
+# Ouvre port firewall quand le service est lancé
+ExecStartPre= firewall-cmd --add-port=8000/tcp
+ExecStartPre= firewall-cmd --reload
+# Lancer un web serveur
+ExecStart=python -m http.server
+# Ferme port firewall quand stoppé
+ExecStop=firewall-cmd --remove-port=8000/tcp
+
+# Section nécessaire pour faire fonctionner le enable
+[Install]  
+WantedBy=multi-user.target
 ```
 
+*Le service est lancé*
 ```
+[root@fedora31-2 jonimofo]# systemctl restart webserver && systemctl status webserver
+
+● webserver.service - Simple web server
+   Loaded: loaded (/etc/systemd/system/webserver.service; disabled; vendor preset: disabled)
+   Active: active (running) since Fri 2019-12-06 11:53:10 CET; 16ms ago
+  Process: 23318 ExecStartPre=/usr/bin/firewall-cmd --add-port=8000/tcp (code=exited, status=0/SUCCESS)
+  Process: 23323 ExecStartPre=/usr/bin/firewall-cmd --reload (code=exited, status=0/SUCCESS)
+ Main PID: 23345 (python)
+    Tasks: 1 (limit: 4685)
+   Memory: 2.6M (max: 128.0M)
+   CGroup: /system.slice/webserver.service
+           └─23345 /usr/bin/python -m http.server
+
+Dec 06 11:53:09 fedora31-2 systemd[1]: Starting Simple web server...
+Dec 06 11:53:10 fedora31-2 firewall-cmd[23318]: success
+Dec 06 11:53:10 fedora31-2 firewall-cmd[23323]: success
+Dec 06 11:53:10 fedora31-2 systemd[1]: Started Simple web server.
+```
+
+*On vérifie le firewall*
+```
+[root@fedora31-2 jonimofo]# firewall-cmd --list-ports
+8000/tcp
+```
+
+*On test le webserver*
+```
+[jonimofo@fedora31-2 ~]$ curl 0.0.0.0:8000 | head -6
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  1226  100  1226    0     0   399k      0 --:--:-- --:--:-- --:--:--  598k
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for /</title>
+</head>
+```
+
+La commande `enable` permet de configurer les services qui seront lancés au démarrage.
+
+
+#### 3. Sandboxing (heavy security)
+
+*Tester le niveau de sécurité du service précemment créé*
+```
+[root@fedora31-2 jonimofo]# systemd-analyze security webserver | tail -1
+
+→ Overall exposure level for webserver.service: 9.6 UNSAFE 😨
+```
+Pas fameux. Tâchons d'améliorer ça.
