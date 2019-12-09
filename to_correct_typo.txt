@@ -9,3 +9,5 @@
 dans les cas les plus simples, systemd gère l'extionction des processus lui-même grâece au monitoring cgroup (il détermine le numéro du père des processus)
 ```
 on peut aussi utiliser systemd-analyse blame en ligne de commande
+
+avoir installer docker

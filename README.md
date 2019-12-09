@@ -1,5 +1,10 @@
 # GIRALT Benjamin - M1 Infra Cloud - TP systemd
 
+## Préambule
+
+Ce rendu de TP est davantage à consider pour le correcteur comme un recueil de notes prises pour moi-même qu'un rendu de TP conventionnel à proprement parler. C'est la raison pour laquelle le lecteur pourra parfois trouver des notes pour plus tard ou des interrogations.  
+Bonne lecture.
+
 ## I.1. First steps
 
 ### Vérifier que la version de systemd est > 241
@@ -10,17 +15,8 @@ systemd 243 (v243.4-1.fc31)
 +PAM +AUDIT +SELINUX +IMA -APPARMOR +SMACK +SYSVINIT +UTMP +LIBCRYPTSETUP +GCRYPT +GNUTLS +ACL +XZ +LZ4 +SECCOMP +BLKID +ELFUTILS +KMOD +IDN2 -IDN +PCRE2 default-hierarchy=unified
 ```
 
-*TODO : se documenter + décrire brièvement les autres processus système !! Attention : ne sont pas des kernels process, ces derniers sont listés entre []*
-
-
-# TODO le reste de la question (a été update par Léo)
-
-
-
-
-
-
-
+*TODO : se documenter + décrire brièvement les autres processus système !! Attention : ne sont pas des kernels process, ces derniers sont listés entre []*  
+*TODO le reste de la question (a été update par Léo plus tard)*
 
 ## I.2. Gestion du temps
 ```
@@ -36,14 +32,13 @@ System **clock** synchronized: yes
 ```
 
 ### Différence entre Local Time, Universal Time, RTC Time
+
 * **Local Time :** correspond à l'heure du fuseau horaire selectionné (ici UTC+00)
 * **UTC (Universal Time Coordinate) :** anciennement GMT, échelle de temps adptée comme base du temps civil internation par la majorité des pays du globe. Elle est comprise entre le *Temps Atomique International (TAI)*, déconnecté des rotations de la terre et donc absolument invariable, et le *Temps Universel (UT)*, lié aux rotations de la Terre, légèrement variable à cause de la vitesse variable de la Terre et de ses courbes elliptiques. Cette échelle de temps permet donc de rester à l'heure exacte malgré les rotations de la Terre et ainsi s'adpater aux secondes intercalaraires/additionnelles relevées dans l'UT.
 * **RTC Time (Real Time Clock) :** horloge matérielle intégrée, ultra précise (à la nano-seconde), généralement alimentée par une pile pour permettre de rester à l'heure une fois l'ordinateur éteint, en vue de déclencher des alarmes ou autres...
 
-
 ### Pourquoi utiliser le RTC time ?
 L'horloge RTC permet de conserver l'heure sur un appareil qui subirait une par exemple une coupure d'alimentation et ne pourrait se connecter à son réseau après redémarrage. Cela permettrait donc de conserver l'heure du serveur sans même devoir se connecter à un serveur NTP. Particulièrement utile pour la cohérence des logs de la machine...
-
 
 ### Changer de timezone pour un autre fuseau horaire européen + vérification
 ```
@@ -61,7 +56,7 @@ System clock synchronized: yes
               NTP service: inactive
           RTC in local TZ: no
 ```
-On peut donc voir que le temps a bien été changé. Le choix de la timezone Asia/Tokyo n'a pas été fait au hasard : le Japon ça déchire. Et aussi TOkyo = RIP Nujabes :(
+On peut donc voir que le temps a bien été changé. Le choix de la timezone Asia/Tokyo n'a pas été fait au hasard (RIP Nujabes :()
 
 
 ### Désactiver le service lié à la synchronisation du temps avec cette commande et vérifier à la main qu'il a été coupé
@@ -71,9 +66,6 @@ On peut donc voir que le temps a bien été changé. Le choix de la timezone Asi
 [root@fedora31-2 jonimofo]# timedatectl  | grep NTP
               NTP service: inactive
 ```
-
-
-
 
 
 ## I.3. Gestion des noms
@@ -91,11 +83,11 @@ On peut donc voir que le temps a bien été changé. Le choix de la timezone Asi
 ```
 Ici on peut voir que l'apostrophe (caractère spécial) a bien été prise en compte dans le nom et figure dans le "Pretty hostname".
 
-`--static` hostname "traditionnel", sélectionné par l'utilisateur et stocké dans le */etc/hostname*
-`--transient` hostname éphémère (littéralement !). C'est un nom d'hôte dynamique maintenu par le kernel. Il peut être changé par DHCP ou autre.
+`--static` hostname "traditionnel", sélectionné par l'utilisateur et stocké dans le */etc/hostname*  
+`--transient` hostname éphémère (littéralement !). C'est un nom d'hôte dynamique maintenu par le kernel. Il peut être changé par DHCP ou autre.  
 `--pretty` Rend le hostname plus facilement lisible pour un humain. Peut être combiné avec les option --static ou --transient. Si l'option est spécifiée, les espaces seront remplacés par des « - » et les caractères spéciaux seront supprimés. 
 
-Il parait bien plus pertinent d'utiliser le --static en prod : au moins on est sûr que les noms ne changeront pas. Ceci pour empêcher/prévenir tout dysfonctionnement potentiel lié à un nom d'hôte qui aurait changé.
+Il parait bien plus pertinent d'utiliser le `--static` en prod : au moins on est sûr que les noms ne changeront pas. Ceci pour empêcher/prévenir tout dysfonctionnement potentiel lié à un nom d'hôte qui aurait changé.
 
 
 ```
@@ -120,7 +112,7 @@ Il parait bien plus pertinent d'utiliser le --static en prod : au moins on est s
 ```
 Comme le dit ce bon vieux Léo dans le TP, on recueille ici avec cette commande tout un tas d'infos super importantes (et très utile dans un inventaire disons-le !).
 
-#### TODO/LATER : creuser davantage cette histoire de set-deployment et voir comment s'en servir efficacement dans un SI.
+*TODO/LATER : creuser davantage cette histoire de set-deployment et voir comment s'en servir efficacement dans un SI*
 
 
 ## I.4. Gestion du réseau (et résolution de noms)
@@ -169,7 +161,6 @@ DHCP4.OPTION[30]:                       routers = 192.168.5.1
 DHCP4.OPTION[31]:                       subnet_mask = 255.255.255.0
 ```
 
-
 ### systemd-networkd
 
 ### Stopper NetworkManager
@@ -201,10 +192,12 @@ Created symlink /etc/systemd/system/multi-user.target.wants/systemd-networkd.ser
 Created symlink /etc/systemd/system/sockets.target.wants/systemd-networkd.socket → /usr/lib/systemd/system/systemd-networkd.socket.
 Created symlink /etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service → /usr/lib/systemd/system/systemd-networkd-wait-online.service.
 ```
+
 ### Démarrer systemd-networkd
 ```
 [root@fedora31-2 jonimofo]# systemctl start systemd-networkd
 ```
+
 ### Vérification
 ```
 [root@fedora31-2 jonimofo]# systemctl status systemd-networkd
@@ -220,22 +213,10 @@ Created symlink /etc/systemd/system/network-online.target.wants/systemd-networkd
            └─1351 /usr/lib/systemd/systemd-networkd
 ```
 
-
-
-*Pour tester le bon fonctionnement de systemd-networkd, je crée une interface pointe sur "rien", histoire de ne pas me retrouver bloqué hors de ma vm*
-
-### Création d'une interface
-
-TODO
- ```
-
- ```
-
-
+*TODO Pour tester le bon fonctionnement de systemd-networkd, je crée une interface pointe sur "rien", histoire de ne pas me retrouver bloqué hors de ma vm*
 
 
 ### systemd-resolved
-
 
 ### Activer le service de résolution de nom (maintenant ET au boot)
 ```
@@ -288,7 +269,6 @@ On remarque bien ici les adresses de loopback, avec le DNS écoutant sur le port
 ```
 Le premier résultat correspond au DNS global, le deuxième au DNS per-link de "ens3", mon interface eth0.
 
-
 Requête en utilisant spécifiquement le dns de systemd-resolved
 ```
 [root@fedora31-2 network]# dig @192.168.5.1 +short lemonde.fr
@@ -307,7 +287,6 @@ lemonde.fr: 151.101.194.217                    -- link: ens3
 ```
 On remarque ici que systemd-resolve affiche même le nom de l'interface liée. systemd-resolve permet donc de pouvoir attribuer un DNS à une interface donnée. Pratique.
 
-
 ### Remplacer /etc/resolv.conf par un lien symbolique pointant vers /run/systemd/resolve/stub-resolv.conf
 ```
 [root@fedora31-2 network]# ls -la /etc/resolv.conf
@@ -324,13 +303,13 @@ options edns0
 ```
 
 ### Modifier la configuration de systemd-resolved
+
 Ici j'ajoute l'adresse de DNS 100.100.100.100 (une adresse bidon), simplement pour tester la bonne application des paramètres. 
 ```
 [root@fedora31-2 network]# cat /etc/systemd/resolved.conf | grep -v "#" | grep DNS=
 
 DNS=100.100.100.100
 ```
-
 
 Je vérifie la bonne application.
 ```
@@ -347,7 +326,7 @@ Avantages du DNS over TLS
 * Chiffrement du trafic sur le port 853 (en DNS normal le trafic passe en clair)
 * On reste en UDP, augmentant ainsi les performances réseau
 
-#### TODO/LATER recenser les différences DNS/TLS et DNS/HTTPS + creuser la proposition de navigateur web DNS/HTTPS par Mozilla et autres.
+*TODO/LATER recenser les différences DNS/TLS et DNS/HTTPS + creuser la proposition de navigateur web DNS/HTTPS par Mozilla et autres.*
 
 On spécifie un DNS qui supporte le DNS over TLS 
 ```
@@ -357,8 +336,8 @@ On spécifie un DNS qui supporte le DNS over TLS
 DNS=1.1.1.1
 ```
 
-
 ### Vérifier si le trafic DNS est bien over TLS (donc par le port 853)
+
 ```
 [root@fedora31-2 network]# tcpdump -i ens3 -n -nn port 853
 
@@ -373,8 +352,8 @@ listening on ens3, link-type EN10MB (Ethernet), capture size 262144 bytes
 16:19:25.142559 IP 192.168.5.2.47782 > 1.1.1.1.853: Flags [P.], seq 1:558, ack 1, win 502, length 557
 ```
 
-**Ne pas oublier de flush le cache !**
-`resolvectl flush-caches`
+**Ne pas oublier de flush le cache !**  
+`resolvectl flush-caches`  
 `resolvectl query google.com` ou `dig google.com @127.0.0.53`
 
 
@@ -392,8 +371,7 @@ Le DNSSEC :
     DNSSEC supported: yes
 ```
 
-#### TODO/LATER : quels tools utiliser pour vérifier que DNSSEC appliqué ? (à l'image de TCPDUMP pour le DNS over TLS)
-
+*TODO/LATER : quels tools utiliser pour vérifier que DNSSEC appliqué ? (à l'image de TCPDUMP pour le DNS over TLS)*
 
 
 ## I.5. Gestion de sessions logind
@@ -447,7 +425,6 @@ Dec 03 22:13:05 fedora31-2 su[10903]: pam_unix(su:session): session opened for u
 ```
 On voit même ici la séquence d'ouverture de la session pour l'user jonimofo. Unix c'est chouette quand même !
 
-
 Permet également de récupérer des informations sur un utilisateur qui a lancé une session
 ```
 [root@fedora31-2 jonimofo]# loginctl show-user jonimofo
@@ -471,10 +448,7 @@ Linger=no
 Ici encore des infos assez importantes concernant l'utilisateur : UID, GID, ID du Slice, etc...
 
 
-### TODO/LATER me forcer à utiliser plus souvent cette commande pour récolter des infos.
-
-
-
+*TODO/LATER me forcer à utiliser plus souvent cette commande pour récolter des infos.*
 
 
 ## I.6. Gestion d'unit basique (services)*
@@ -499,7 +473,6 @@ Alias=ctrl-alt-del.target
 ```
 Décidément, en effet sur Unix, TOUT est fichier !
 
-
 Trouver l'unité associée au processus `chronyd`
 ```
 [root@fedora31-2 jonimofo]# pidof chronyd
@@ -508,7 +481,8 @@ Trouver l'unité associée au processus `chronyd`
 ```
 *Merci à toi Léo de nous le faire désactiver juste avant et par là-même de me faire chercher (à une heure bien trop tardive) le pid d'uns service qui ne tournait plus. J'ai même réussi à me demander si un service qui était inactive pouvait quand même avoir un PID.*
 
-#### TODO/LATER vérifier si un process prendra forcément le même PID à chaque fois. Si oui, pourquoi ? Si non, pourquoi ?
+*TODO/LATER vérifier si un process prendra forcément le même PID à chaque fois. Si oui, pourquoi ? Si non, pourquoi ?*
+
 
 ## II. Boot et Logs
 
@@ -538,20 +512,15 @@ Identifier le cgroup utilisé par votre session SSH.
 └─17762
 ```
 
-
-!!!! attention peut être just el enuméro du pid, pas du Cgroup !! 
-
-
-
 Identifier la RAM maximale à votre disposition
 ```
 [root@fedora31-2 cgroup]# cat memory/memory.max_usage_in_bytes
 
 602877952
 ```
+*TODO Modifier la RAM dédiée à votre session utilisateur*  
+*COMMENT vérifier la mémoire sans cat les fichiers ? Possible ?*
 
-### TODO Modifier la RAM dédiée à votre session utilisateur
-### COMMENT vérifier la mémoire sans cat les fichiers ? Possible ?
 A la base on a 256M de RAM alloué
 ```
 [root@fedora31-2 cgroup]# cat /etc/systemd/system.control/user.slice.d/50-MemoryMax.conf | grep -v '#'
@@ -619,18 +588,13 @@ signal time=1575535386.390445 sender=:1.224 -> destination=(null destination) se
    ]
  ```
 
-*"Ok Jamy, mais ça veut dire quoi tout ça ?!"*
-#### TODO gif C pas sorcier
-#### TODO finir les nouvelles UPDATES Léo
-#### TODO script Python pour ouvrir lecteur CD !
+*TODO script Python pour ouvrir lecteur CD (parce que c'est la classe quand même*
+*TODO : faire le reste de la question (update par Léo)*
+*TODO dumper avec dbus-monitor et le piper dans wireshark*
 
-Un `bus` est une structure permettant le passage de message entre ses membres. 
-
-busctl AU LIEU de dbus monitor
-busctl tree
+J'ai choisi de faire cette partie plus tard parce que je ne voulais pas la faire à moitié. L'intérêt pour moi c'est d'essayer d'aller comprendre le plus bas possible que je puisse ce qui se passe. Je continuerai à creuser les d-bus parce que je trouve ça super intéressant cette mécanique d'IPC. A creuser davantage donc...
 
 
-#### TODO dumper avec dbus-monitor et le piper dans wireshark
 
 ### 3. Restriction et isolation
 
@@ -699,14 +663,13 @@ On peut donc observer un récapitulatif de ce qu'il s'est passé dans le process
 * runtime
 * traffic envoyé/reçu
 
-#### TODO chercher s'il y a une raison particulière à ce récapitulatif. Est-ce que c'est parce qu'on utilise systemd-run à des fins de tests et donc on aime bien avoir des retours ?
+*TODO chercher s'il y a une raison particulière à ce récapitulatif. Est-ce que c'est parce qu'on utilise systemd-run à des fins de tests et donc on aime bien avoir des retours ?*
 
 *Ajouter des restrictions réseaux et montrer qu'elles sont restrictives.*
 ```
 [root@fedora31-2 ~]# ip a | grep "inet " | grep -v 127
 
     inet 192.168.5.252/24 brd 192.168.5.255 scope global dynamic ens3
-
 
 [root@fedora31-2 jonimofo]# systemd-run -p IPAccounting=true -p IPAddressAllow=192.168.5.0/24 -p IPAddressDeny=any --wait -t /bin/bash
 
@@ -732,9 +695,6 @@ IP traffic sent: 0B
 ```
 *On voit bien que les pings ne sont pas passés. Même la résolution DNS a été bloquée.*
 
-
-
-
 *Configuration IP de base*
 ```
 [jonimofo@fedora31-2 ~]$ ip a | grep "inet " | grep -v 127
@@ -747,13 +707,6 @@ IP traffic sent: 0B
 * **--ephemeral** run le container avec un snapshot du répertoire racine, et le détruit quand on le quitte
 * **-D** répertoire racine pour le container
 * **--private-network** désactive le réseau dans le container (il est donc bien isolé !)
-
-
-
-
-
-
-
 
 
 ### 4. systemd units in-depth
@@ -815,7 +768,6 @@ Qu'est-ce qu'une `Personality` ? Sert à définir différents domaines d'exécut
 
 * **ProtectKernelModules** booléen. Si vrai, le chargement de module kernel sera refusé. Cela permet de désactiver les opérations de chargement / "déchargement"  dans un kernel modulaire. Il est recommandé de l'activer pour la plupart des services qui n'ont pas besoin de file systems spéciaux ou de modules kernel supplémentaires pour fonctioner.  
 Cette option est seulement disponible pour les services système.
-
 
 
 #### 2. Création de service simple
@@ -899,11 +851,11 @@ Qu'est-ce qu'un runlevel ? C'est finalement un niveau de capacité appliqué à 
 
 |Run Lvl| Target Units                       | Description             |
 |-------| -----------------------------------| ----------------------- |
-|0      | runlevel0.target, poweroff.target  | Shut down and power off |
-|1      | runlevel1.target, rescue.target    | Set up a rescue shell   |
-|2,3,4  | runlevel[234].target,              | Set up a non-gfx multi-user shell multi-user.target |
-|5      | runlevel5.target, graphical.target | Set up a gfx multi-user shell |
-|6      | runlevel6.target, reboot.target    | Shut down and reboot the system |
+| 0     | runlevel0.target, poweroff.target  | Shut down and power off |
+| 1     | runlevel1.target, rescue.target    | Set up a rescue shell   |
+| 2,3,4 | runlevel[234].target,              | Set up a non-gfx multi-user shell multi-user.target |
+| 5     | runlevel5.target, graphical.target | Set up a gfx multi-user shell |
+| 6     | runlevel6.target, reboot.target    | Shut down and reboot the system |
 
 
 *Display le runlevel courant*
@@ -943,32 +895,7 @@ lrwxrwxrwx. 1 root root   13 Nov 19 15:40 /lib/systemd/system/runlevel6.target -
 ```
 Pas fameux. Tâchons d'améliorer ça.
 
-
-*Expliquer au moins 5 cinq clauses de sécurité ajoutées*
-* **PrivateTmp** Isole le `/tmp` du service de celui du host (à l'aide de namespaces system)
-* **PrivateUser** Le service n'a pas accès aux autres utilisateurs.
-* **ProtectSystem**
-* **ProtectSystem**
-* **ProtectSystem**
-
---> expliquer pourquoi chaque choix
-
-*Mettez en place au moins une mesure liée aux cgroups*
-vous pouvez vérifier que c'est le cas en regardant dans /sys/fs/cgroup
-
-*Mettez en place au moins une mesure liée aux namespaces*
-vous pouvez vérifier que c'est le cas en regardant dans /proc/<PID>/ns
-
-
-vérifier avec pscap ??
-show running processes with cgroups hierarchy made by systemd:
-
-  ps xawf -eo pid,user,cgroup,args
-
-
-
-
-
+*Le service une fois un peu amélioré*
 ```
 [Unit]
 Description=Simple web server
@@ -1002,8 +929,83 @@ ReadOnlyDirectories=/var
 CapabilityBoundingSet=CAP_CHOWN CAP_KILL
 RestrictNamespaces=CLONE_NEWCGROUP CLONE_NEWIPC CLONE_NEWNET
 
-
 # Section nécessaire pour faire fonctionner le enable
 [Install]
 WantedBy=multi-user.target
 ```
+
+*Expliquer au moins 5 cinq clauses de sécurité ajoutées*
+* **PrivateTmp** Isole le `/tmp` du service de celui du host (à l'aide de namespaces system)
+* **PrivateUser** Le service n'a pas accès aux autres utilisateurs.
+* **InaccessibleDirectories** On limite l'accès aux dossier pour le service
+* **ReadOnlyDirectories** On autorise une lecture en read-only, uniquement sur ce soddiser
+* **LimitNPROC** Empêche les forks bombs
+
+*Relançons un test*
+```
+[root@fedora31-2 system]# systemd-analyze security webserver | tail -1
+
+→ Overall exposure level for webserver.service: 5.3 MEDIUM 😐
+```
+C'est mieux. Mais par manque de temps je ne peux pas continuer aussi loin que je le voudrais. Cependant, des interrogations/pistes d'exploration demeurent/surviennent à la suite de ce travail :
+* Pourrait-on définir facilement un modèle de service bien isolé, que l'on pourrait appliquer à tout un tas d'autres services
+* Utiliser la commande pscap ?
+* Pourquoi des fois les restrictions CGroup/Namespaces fonctionnent si on en spécifie aucune, et pourquoi des fois c'est l'inverse ?
+
+
+### 4 Event-base activation
+
+[Starting Docker on demand](https://blog.dbrgn.ch/2017/2/3/starting-docker-with-socket-activation/)
+[systemd socket activation](http://0pointer.de/blog/projects/socket-activation.html)
+
+*Socket Docker*
+```
+[root@fedora31-2 system]# systemctl cat docker.socket
+
+# /etc/systemd/system/docker.socket
+[Unit]
+Description=Docker socket
+PartOf=docker.service
+
+[Socket]
+ListenStream =/var/run/docker.sock
+SocketMode=0660
+SockerUser=root
+SocketGroup=docker
+
+[Install]
+WantedBy=sockets.target
+```
+
+*Service Docker*
+```
+[root@fedora31-2 system]# systemctl cat docker.service
+
+# /etc/systemd/system/docker.service
+[Unit]
+Description=Start Docker on demand
+Requires=docker.socket
+
+[Service]
+ExecStart=/usr/bin/dockerd -H fd://
+```
+
+*Pour activer le Docker à la demande, on commence par désactiver le service au démarrage puis le stopper*
+```
+[root@fedora31-2 system]# systemctl disable docker.service
+[root@fedora31-2 system]# systemctl stop docker.service
+[root@fedora31-2 system]# systemctl is-active docker
+inactive
+```
+*On active au démarrage le socket et on le démarre
+```
+[root@fedora31-2 system]# systemctl enable docker.socket
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /etc/systemd/system/docker.socket.
+[root@fedora31-2 system]# systemctl start docker.socket
+```
+*On vérifie*
+```
+[root@fedora31-2 system]# docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+```
+Je découvre ici la profondeur du niveau de granularité des unités systemd, tellement profond. J'ignorais également qu'on pouvait ainsi créer une unité systemd pour ne pas laisser un démon tourner en permanence par exemple.
