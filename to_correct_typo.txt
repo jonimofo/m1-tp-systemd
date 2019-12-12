@@ -11,3 +11,4 @@ dans les cas les plus simples, systemd gère l'extionction des processus lui-mê
 on peut aussi utiliser systemd-analyse blame en ligne de commande
 
 avoir installer docker
+

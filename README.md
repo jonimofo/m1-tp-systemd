@@ -1009,3 +1009,6 @@ Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /etc/
 CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
 ```
 Je découvre ici la profondeur du niveau de granularité des unités systemd, tellement profond. J'ignorais également qu'on pouvait ainsi créer une unité systemd pour ne pas laisser un démon tourner en permanence par exemple.
+
+
+## TO BE CONTINUED... (AND FINISHED)
